@@ -32,10 +32,10 @@ def main():
         check_domain_expiration(domain, current_datetime, ExpirationType.DOMAIN.name)
         print()
 
-def check_ssl_cert(context, hostname, today, expiration_type):
-    with socket.create_connection((hostname, 443)) as sock:
-        with context.wrap_socket(sock, server_hostname=hostname) as ssock:
-            print("Domain:", hostname)
+def check_ssl_cert(context, domain, today, expiration_type):
+    with socket.create_connection((domain, 443)) as sock:
+        with context.wrap_socket(sock, server_hostname=domain) as ssock:
+            print("Domain:", domain)
             print("SSL/TLS version:", ssock.version())
 
             # Get cert in DER format
@@ -49,13 +49,13 @@ def check_ssl_cert(context, hostname, today, expiration_type):
             cert_data = x509.load_pem_x509_certificate(str.encode(pem_data))
 
             print("Certificate expiration date:", cert_data.not_valid_after)
-            compare_date_and_build_msg(cert_data.not_valid_after, today, expiration_type, hostname)
+            compare_date_and_build_msg(cert_data.not_valid_after, today, expiration_type, domain)
 
-def check_domain_expiration(hostname, today, expiration_type):
-    domain = whois.whois(hostname)
+def check_domain_expiration(domain, today, expiration_type):
+    domain = whois.whois(domain)
     if isinstance(domain.expiration_date, list):
         print("Domain expiration date:", domain.expiration_date[0])
-        compare_date_and_build_msg(domain.expiration_date[0], today, expiration_type, hostname)
+        compare_date_and_build_msg(domain.expiration_date[0], today, expiration_type, domain)
         # Case for when multiple domain expiration dates are found.
         # print("Found", len(domain.expiration_date), "domain expiration dates.")
         # for date in domain.expiration_date:
@@ -63,28 +63,28 @@ def check_domain_expiration(hostname, today, expiration_type):
         #     date_compare(date, today, expiration_type)
     else:
         print("Domain expiration date:", domain.expiration_date)
-        compare_date_and_build_msg(domain.expiration_date, today, expiration_type, hostname)
+        compare_date_and_build_msg(domain.expiration_date, today, expiration_type, domain)
 
-def compare_date_and_build_msg(date, today, expiration_type, hostname):
+def compare_date_and_build_msg(expiration_date, today, expiration_type, domain):
     msg = ""
-    if date < today:
-        delta_time = today - date
+    if expiration_date < today:
+        delta_time = today - expiration_date
         if expiration_type == ExpirationType.DOMAIN.name:
             print("Domain is expired!")
-            msg += "Domain: " + hostname + " has been expired " + "for " + str(delta_time) + "\n"
+            msg += "Domain: " + domain + " has been expired " + "for " + str(delta_time) + "\n"
         elif expiration_type == ExpirationType.CERTIFICATE.name:
             print("Certificate is expired!")
-            msg += "Certificate for domain: " + hostname + " has been expired " + "for " + str(delta_time) + "\n"
+            msg += "Certificate for domain: " + domain + " has been expired " + "for " + str(delta_time) + "\n"
         print("\nEMAIL MESSAGE:")
         notify_user(msg)
     else:
-        delta_time = date - today
+        delta_time = expiration_date - today
         if expiration_type == ExpirationType.DOMAIN.name:
             print("Domain is valid.")
-            msg += "Domain: " + hostname + " is still valid " + "for " + str(delta_time) + "\n"
+            msg += "Domain: " + domain + " is still valid " + "for " + str(delta_time) + "\n"
         elif expiration_type == ExpirationType.CERTIFICATE.name:
             print("Certificate is valid.")
-            msg += "Certificate for domain: " + hostname + " is still valid " + "for " + str(delta_time) + "\n"
+            msg += "Certificate for domain: " + domain + " is still valid " + "for " + str(delta_time) + "\n"
         
         if delta_time.days < notification_delta_days:
             print("Expiration date is within " + str(notification_delta_days) + " days.\n")
