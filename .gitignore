@@ -127,3 +127,11 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# SendGrid environment files
+
+# Windows
+sendgrid.env.ps1
+
+# Linux/macOS
+sendgrid.env

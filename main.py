@@ -3,6 +3,9 @@
 from datetime import datetime
 from enum import Enum
 from cryptography import x509
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
+import os
 import socket
 import ssl
 import whois
@@ -46,13 +49,13 @@ def check_ssl_cert(context, hostname, today, expiration_type):
             cert_data = x509.load_pem_x509_certificate(str.encode(pem_data))
 
             print("Certificate expiration date:", cert_data.not_valid_after)
-            date_compare(cert_data.not_valid_after, today, expiration_type)
+            compare_date_and_build_msg(cert_data.not_valid_after, today, expiration_type, hostname)
 
 def check_domain_expiration(hostname, today, expiration_type):
     domain = whois.whois(hostname)
     if isinstance(domain.expiration_date, list):
         print("Domain expiration date:", domain.expiration_date[0])
-        date_compare(domain.expiration_date[0], today, expiration_type)
+        compare_date_and_build_msg(domain.expiration_date[0], today, expiration_type, hostname)
         # Case for when multiple domain expiration dates are found.
         # print("Found", len(domain.expiration_date), "domain expiration dates.")
         # for date in domain.expiration_date:
@@ -60,29 +63,53 @@ def check_domain_expiration(hostname, today, expiration_type):
         #     date_compare(date, today, expiration_type)
     else:
         print("Domain expiration date:", domain.expiration_date)
-        date_compare(domain.expiration_date, today, expiration_type)
+        compare_date_and_build_msg(domain.expiration_date, today, expiration_type, hostname)
 
-def date_compare(date, today, expiration_type):
+def compare_date_and_build_msg(date, today, expiration_type, hostname):
+    msg = ""
     if date < today:
+        delta_time = today - date
         if expiration_type == ExpirationType.DOMAIN.name:
             print("Domain is expired!")
+            msg += "Domain: " + hostname + " has been expired " + "for " + str(delta_time) + "\n"
         elif expiration_type == ExpirationType.CERTIFICATE.name:
             print("Certificate is expired!")
-        delta_time = today - date
-        print("Expired for", delta_time)
+            msg += "Certificate for domain: " + hostname + " has been expired " + "for " + str(delta_time) + "\n"
+        print("\nEMAIL MESSAGE:")
+        notify_user(msg)
     else:
+        delta_time = date - today
         if expiration_type == ExpirationType.DOMAIN.name:
             print("Domain is valid.")
+            msg += "Domain: " + hostname + " is still valid " + "for " + str(delta_time) + "\n"
         elif expiration_type == ExpirationType.CERTIFICATE.name:
             print("Certificate is valid.")
-        delta_time = date - today
-        print("Still valid for", delta_time)
+            msg += "Certificate for domain: " + hostname + " is still valid " + "for " + str(delta_time) + "\n"
+        
         if delta_time.days < notification_delta_days:
-            notify_user()
+            print("Expiration date is within " + str(notification_delta_days) + " days.\n")
+            print("EMAIL MESSAGE:")
+            notify_user(msg)
 
-def notify_user():
+def notify_user(msg):
     # Notify user of expiration
-    print("Notification condition met")
+    print("Sending notification email...")
+    print(msg)
+    message = Mail(
+    from_email="",
+    to_emails="",
+    subject="",
+    html_content=msg)
+    try:
+        # Be sure the environment variable is being set or you will get a HTTP Error 401: Unauthorized.
+        # print("sg", os.environ.get("SENDGRID_API_KEY"))
+        sg = SendGridAPIClient(os.environ.get("SENDGRID_API_KEY"))
+        response = sg.send(message)
+        # print(response.status_code)
+        # print(response.body)
+        # print(response.headers)
+    except Exception as e:
+        print(e.message)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
