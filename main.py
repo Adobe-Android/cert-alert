@@ -14,6 +14,9 @@ class ExpirationType(Enum):
 # https://www.ssl.com/sample-valid-revoked-and-expired-ssl-tls-certificates/
 domains = ["expired-rsa-dv.ssl.com", "expired-ecc-dv.ssl.com", "test-dv-rsa.ssl.com", "test-dv-ecc.ssl.com"]
 
+# Example: You want to be notified 30, 60, or 90 days before your certificate or domain expires.
+notification_delta_days = 30
+
 def main():
     context = ssl.create_default_context()
     context.check_hostname = False
@@ -65,11 +68,21 @@ def date_compare(date, today, expiration_type):
             print("Domain is expired!")
         elif expiration_type == ExpirationType.CERTIFICATE.name:
             print("Certificate is expired!")
+        delta_time = today - date
+        print("Expired for", delta_time)
     else:
         if expiration_type == ExpirationType.DOMAIN.name:
             print("Domain is valid.")
         elif expiration_type == ExpirationType.CERTIFICATE.name:
             print("Certificate is valid.")
+        delta_time = date - today
+        print("Still valid for", delta_time)
+        if delta_time.days < notification_delta_days:
+            notify_user()
+
+def notify_user():
+    # Notify user of expiration
+    print("Notification condition met")
 
 if __name__ == '__main__':
     main()
