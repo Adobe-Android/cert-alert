@@ -53,8 +53,6 @@ def check_ssl_cert(context, domain, today, expiration_type):
 def check_domain_expiration(domain, today, expiration_type):
     whois_domain = whois.whois(domain)
     if isinstance(whois_domain.expiration_date, list):
-        # print("Domain expiration date:", whois_domain.expiration_date[0])
-        # compare_date_and_build_msg(whois_domain.expiration_date[0], today, expiration_type, domain)
         # Case for when multiple domain expiration dates are found.
         print("Found", len(whois_domain.expiration_date), "domain expiration dates.\n")
         for expiration_date in whois_domain.expiration_date:
