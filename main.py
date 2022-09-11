@@ -30,7 +30,6 @@ def main():
     for domain in domains:
         check_ssl_cert(context, domain, current_datetime, ExpirationType.CERTIFICATE.name)
         check_domain_expiration(domain, current_datetime, ExpirationType.DOMAIN.name)
-        print()
 
 def check_ssl_cert(context, domain, today, expiration_type):
     with socket.create_connection((domain, 443)) as sock:
@@ -54,11 +53,11 @@ def check_ssl_cert(context, domain, today, expiration_type):
 def check_domain_expiration(domain, today, expiration_type):
     whois_domain = whois.whois(domain)
     if isinstance(whois_domain.expiration_date, list):
-        print("Domain expiration date:", whois_domain.expiration_date[0])
-        compare_date_and_build_msg(whois_domain.expiration_date[0], today, expiration_type, domain)
+        # print("Domain expiration date:", whois_domain.expiration_date[0])
+        # compare_date_and_build_msg(whois_domain.expiration_date[0], today, expiration_type, domain)
         # Case for when multiple domain expiration dates are found.
-        # print("Found", len(domain.expiration_date), "domain expiration dates.")
-        for expiration_date in domain.expiration_date:
+        print("Found", len(whois_domain.expiration_date), "domain expiration dates.\n")
+        for expiration_date in whois_domain.expiration_date:
             print("Domain expiration date:", expiration_date)
             compare_date_and_build_msg(expiration_date, today, expiration_type, domain)
     else:
@@ -70,30 +69,28 @@ def compare_date_and_build_msg(expiration_date, today, expiration_type, domain):
     if expiration_date < today:
         delta_time = today - expiration_date
         if expiration_type == ExpirationType.DOMAIN.name:
-            print("Domain is expired!")
+            print("Domain is expired!\n")
             msg += "Domain: " + domain + " has been expired " + "for " + str(delta_time) + "\n"
         elif expiration_type == ExpirationType.CERTIFICATE.name:
-            print("Certificate is expired!")
+            print("Certificate is expired!\n")
             msg += "Certificate for domain: " + domain + " has been expired " + "for " + str(delta_time) + "\n"
-        print("\nEMAIL MESSAGE:")
         notify_user(msg)
     else:
         delta_time = expiration_date - today
         if expiration_type == ExpirationType.DOMAIN.name:
-            print("Domain is valid.")
+            print("Domain is valid.\n")
             msg += "Domain: " + domain + " is still valid " + "for " + str(delta_time) + "\n"
         elif expiration_type == ExpirationType.CERTIFICATE.name:
-            print("Certificate is valid.")
+            print("Certificate is valid.\n")
             msg += "Certificate for domain: " + domain + " is still valid " + "for " + str(delta_time) + "\n"
         
         if delta_time.days < notification_delta_days:
-            print("Expiration date is within " + str(notification_delta_days) + " days.\n")
-            print("EMAIL MESSAGE:")
+            print("Expiration date is within " + str(notification_delta_days) + " days.")
             notify_user(msg)
 
 def notify_user(msg):
-    # Notify user of expiration
     print("Sending notification email...")
+    print("\nEMAIL MESSAGE:")
     print(msg)
     message = Mail(
     from_email="",
